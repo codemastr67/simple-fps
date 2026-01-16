@@ -241,9 +241,11 @@ if (i === 12 && pressed && !wasPressed) {
   });
 }
 /* =========================
-   MOBILE ARROW KEY UI
+   MOBILE FPS CONTROLS
 ========================= */
 if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+
+  /* --- Left: Arrow keys for movement --- */
   const mobileUI = document.createElement('div');
   mobileUI.style.position = 'fixed';
   mobileUI.style.bottom = '50px';
@@ -271,27 +273,83 @@ if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
     return btn;
   };
 
-  // diamond layout
   const buttons = {
     w: createBtn('↑', 50, 0),
     a: createBtn('←', 0, 50),
     s: createBtn('↓', 50, 100),
-    d: createBtn('→', 100, 50),
-    shoot: createBtn('●', 200, 50) // optional shoot button to the right
+    d: createBtn('→', 100, 50)
   };
 
-  // touch events
   for (let key in buttons) {
     buttons[key].addEventListener('touchstart', e=>{
-      e.preventDefault();
-      if (key === 'shoot') shoot();
-      else move[key]=1;
+      e.preventDefault(); move[key]=1;
     });
     buttons[key].addEventListener('touchend', e=>{
-      e.preventDefault();
-      if (key !== 'shoot') move[key]=0;
+      e.preventDefault(); move[key]=0;
     });
   }
+
+  /* --- Right: Virtual joystick for looking --- */
+  const lookJoystick = document.createElement('div');
+  lookJoystick.style.position = 'fixed';
+  lookJoystick.style.right = '50px';
+  lookJoystick.style.bottom = '50px';
+  lookJoystick.style.width = '120px';
+  lookJoystick.style.height = '120px';
+  lookJoystick.style.borderRadius = '50%';
+  lookJoystick.style.background = 'rgba(0,0,0,0.3)';
+  lookJoystick.style.touchAction = 'none';
+  document.body.appendChild(lookJoystick);
+
+  let draggingLook = false;
+  let lastX = 0, lastY = 0;
+
+  lookJoystick.addEventListener('touchstart', e=>{
+    e.preventDefault();
+    draggingLook = true;
+    lastX = e.touches[0].clientX;
+    lastY = e.touches[0].clientY;
+  });
+
+  lookJoystick.addEventListener('touchmove', e=>{
+    if(!draggingLook) return;
+    e.preventDefault();
+    const dx = e.touches[0].clientX - lastX;
+    const dy = e.touches[0].clientY - lastY;
+    lastX = e.touches[0].clientX;
+    lastY = e.touches[0].clientY;
+
+    // adjust sensitivity
+    const sensitivity = 0.0025;
+    yaw -= dx * sensitivity;
+    pitch = Math.max(-1.55, Math.min(1.55, pitch - dy * sensitivity));
+  });
+
+  lookJoystick.addEventListener('touchend', e=>{
+    e.preventDefault();
+    draggingLook = false;
+  });
+
+  // optional: add a shoot button near right joystick
+  const shootBtn = document.createElement('button');
+  shootBtn.textContent = '●';
+  shootBtn.style.position = 'fixed';
+  shootBtn.style.right = '50px';
+  shootBtn.style.bottom = '200px';
+  shootBtn.style.width = '60px';
+  shootBtn.style.height = '60px';
+  shootBtn.style.borderRadius = '50%';
+  shootBtn.style.background = 'rgba(255,0,0,0.7)';
+  shootBtn.style.color = '#fff';
+  shootBtn.style.fontSize = '24px';
+  shootBtn.style.border = 'none';
+  shootBtn.style.touchAction = 'none';
+  document.body.appendChild(shootBtn);
+
+  shootBtn.addEventListener('touchstart', e=>{
+    e.preventDefault();
+    shoot();
+  });
 }
 
 /* =========================
