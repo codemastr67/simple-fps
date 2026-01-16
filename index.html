@@ -240,7 +240,52 @@ if (i === 12 && pressed && !wasPressed) {
     lastButtons[i] = pressed;
   });
 }
+/* =========================
+   MOBILE CONTROLS
+========================= */
+function isMobile() {
+  return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+}
 
+if (isMobile()) {
+  const mobileUI = document.createElement('div');
+  mobileUI.style.position = 'fixed';
+  mobileUI.style.bottom = '20px';
+  mobileUI.style.left = '50%';
+  mobileUI.style.transform = 'translateX(-50%)';
+  mobileUI.style.display = 'flex';
+  mobileUI.style.gap = '10px';
+  mobileUI.style.pointerEvents = 'auto';
+  document.body.appendChild(mobileUI);
+
+  // left/right/up/down buttons
+  const buttons = {};
+  ['w','a','s','d','shoot'].forEach(key=>{
+    const btn = document.createElement('button');
+    btn.textContent = key === 'w' ? '↑' : key === 's' ? '↓' : key === 'a' ? '←' : key === 'd' ? '→' : '●';
+    btn.style.width = '60px';
+    btn.style.height = '60px';
+    btn.style.borderRadius = '50%';
+    btn.style.background = 'rgba(0,0,0,0.5)';
+    btn.style.color = '#fff';
+    btn.style.fontSize = '24px';
+    btn.style.border = 'none';
+    btn.style.touchAction = 'none'; // prevent scrolling
+    mobileUI.appendChild(btn);
+    buttons[key] = btn;
+
+    // touch events
+    btn.addEventListener('touchstart', e=>{
+      e.preventDefault();
+      if(key==='shoot') shoot();
+      else move[key]=1;
+    });
+    btn.addEventListener('touchend', e=>{
+      e.preventDefault();
+      if(key!=='shoot') move[key]=0;
+    });
+  });
+}
 /* =========================
    ENEMIES
 ========================= */
