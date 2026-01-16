@@ -275,6 +275,7 @@ function shoot(){
 /* =========================
    LOOP
 ========================= */
+  let last = performance.now();
 function loop(now){
   requestAnimationFrame(loop);
   const dt=Math.min(.05,(now-last)/1000);last=now;
