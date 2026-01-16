@@ -1,351 +1,312 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Simple FPS — Single File (Three.js) — PointerLock Safe</title>
-  <style>
-    html,body{height:100%;margin:0;background:#111;color:#eee;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
-    #overlay{position:fixed;left:0;top:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
-    #hud{position:fixed;left:12px;top:12px;color:#fff;font-family:monospace;pointer-events:none}
-    #cross{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none;font-size:20px;color:rgba(255,255,255,0.9)}
-    #startBtn{position:fixed;right:12px;top:12px;padding:8px 12px;border-radius:8px;border:0;background:#28a;color:#fff;pointer-events:auto;cursor:pointer}
-    #instructions{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:rgba(0,0,0,0.5);padding:8px 12px;border-radius:8px;pointer-events:none}
-    #notice{position:fixed;left:50%;top:80px;transform:translateX(-50%);background:rgba(0,0,0,0.7);padding:8px 12px;border-radius:8px;display:none}
-    canvas{display:block}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Simple FPS — Three.js (Pointer-Lock Safe)</title>
+
+<style>
+html,body{
+  height:100%;
+  margin:0;
+  background:#111;
+  color:#eee;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+  overflow:hidden;
+}
+canvas{display:block}
+
+#ui{position:fixed;inset:0;pointer-events:none}
+#hud{position:absolute;top:12px;left:12px;font:14px monospace}
+#cross{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:22px}
+#help{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.6);padding:8px 12px;border-radius:8px;font-size:13px}
+
+#btn{
+  position:absolute;top:12px;right:12px;
+  pointer-events:auto;
+  padding:8px 14px;
+  border:0;border-radius:8px;
+  background:#2a86ff;color:#fff;
+  cursor:pointer;
+}
+#notice{
+  position:absolute;top:70px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.75);
+  padding:8px 12px;border-radius:8px;
+  display:none;font-size:13px;
+}
+.paused #cross{opacity:.4}
+</style>
 </head>
 <body>
-  <button id="startBtn">Click to Play (Pointer Lock)</button>
-  <div id="overlay">
-    <div id="hud">Health: <span id="health">100</span> &nbsp; Ammo: <span id="ammo">30</span> &nbsp; Score: <span id="score">0</span></div>
-    <div id="cross">+</div>
-    <div id="instructions">WASD - move | Mouse - look (Pointer Lock preferred) | Click - shoot | R - reload | P - pause | Esc - release mouse</div>
-    <div id="notice">Pointer Lock is unavailable in this environment. Use <strong>click + drag</strong> to look and aim instead. To get native pointer-lock behavior, run the file locally or in a frame with the <code>allow-pointer-lock</code> permission.</div>
+
+<div id="ui">
+  <div id="hud">
+    HP <span id="hp">100</span> |
+    Ammo <span id="ammo">30</span> |
+    Score <span id="score">0</span>
   </div>
+  <div id="cross">+</div>
+  <div id="help">WASD move · Mouse look · Click shoot · R reload · P pause</div>
+  <div id="notice">Pointer-lock blocked — click & drag to look</div>
+  <button id="btn">Play</button>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
 <script>
-/*
-  Simple First-Person Shooter (single-file)
-  — FIXED to avoid a SecurityError when requestPointerLock() is blocked by sandboxing.
-  Behavior changes:
-    • The code now wraps requestPointerLock() in try/catch and listens for pointerlockerror.
-    • If pointer lock is unavailable, a graceful fallback (click + drag to look) is enabled.
-    • Calls to exitPointerLock() are guarded to avoid errors.
-
-  NOTE: Pointer lock is the best experience (mouse movement captured while the cursor is hidden).
-  If you want that behavior, run this file locally (file://) or on a site/frame that has the
-  `allow-pointer-lock` permission enabled. In sandboxed viewers (like some online sandboxes)
-  pointer lock is blocked for security reasons — this code will now handle that case.
-*/
-
-// Basic three.js setup
+/* =========================
+   BASIC SETUP
+========================= */
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x88aaff);
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+scene.background = new THREE.Color(0x87a7ff);
+
+const camera = new THREE.PerspectiveCamera(75,innerWidth/innerHeight,0.1,500);
+camera.position.set(0,1.6,6);
+
 const renderer = new THREE.WebGLRenderer({antialias:true});
-renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setSize(innerWidth,innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// Light
-const light = new THREE.DirectionalLight(0xffffff, 1.0);
-light.position.set(5,10,7);
-scene.add(light);
-const amb = new THREE.AmbientLight(0x888888);
-scene.add(amb);
+addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
 
-// Floor
-const floorGeo = new THREE.PlaneGeometry(200,200);
-const floorMat = new THREE.MeshStandardMaterial({color:0x445544});
-const floor = new THREE.Mesh(floorGeo, floorMat);
-floor.rotation.x = -Math.PI/2;
+/* =========================
+   LIGHTS & WORLD
+========================= */
+scene.add(new THREE.AmbientLight(0x888888));
+const sun=new THREE.DirectionalLight(0xffffff,1);
+sun.position.set(5,10,5);
+scene.add(sun);
+
+const floor=new THREE.Mesh(
+  new THREE.PlaneGeometry(300,300),
+  new THREE.MeshStandardMaterial({color:0x445544})
+);
+floor.rotation.x=-Math.PI/2;
 scene.add(floor);
 
-// Player (camera) starting position
-camera.position.set(0, 1.6, 5);
+/* =========================
+   UI
+========================= */
+const $=id=>document.getElementById(id);
+const hpEl=$("hp"),ammoEl=$("ammo"),scoreEl=$("score");
+const btn=$("btn"),notice=$("notice"),ui=$("ui");
 
-// Crosshair/hud references
-const healthEl = document.getElementById('health');
-const ammoEl = document.getElementById('ammo');
-const scoreEl = document.getElementById('score');
-const startBtn = document.getElementById('startBtn');
-const noticeEl = document.getElementById('notice');
+/* =========================
+   PLAYER STATE
+========================= */
+let yaw=0,pitch=0;
+let move={w:0,a:0,s:0,d:0};
+let ammo=30,score=0,hp=100;
+let paused=true;
+const speed=5;
 
-// Controls state
-let pointerLocked = false;         // true when pointer lock is actively engaged
-let usingPointerLock = false;      // same as pointerLocked (keeps intent clear)
-let fallbackMouseLook = false;     // true when we detected pointer-lock is unavailable
-let dragging = false;              // true while user is dragging in fallback mode
-let lastMouseX = 0, lastMouseY = 0; // last mouse positions for fallback deltas
-let pitch = 0, yaw = 0;            // camera angles
-const walkSpeed = 4.5; // meters / sec
-let moveForward=false, moveBackward=false, moveLeft=false, moveRight=false;
+/* =========================
+   POINTER LOCK SAFE
+========================= */
+let pointerLocked=false;
+let fallback=false,dragging=false,lastX=0,lastY=0;
+const canvas=renderer.domElement;
 
-// Shooting / ammo
-let ammo = 30; const maxAmmo = 30; let reloading = false;
-let score = 0; let health = 100; let paused = false;
-
-// Enemies
-const enemies = [];
-const enemyMaterial = new THREE.MeshStandardMaterial({color:0xaa4444});
-
-function spawnEnemy(){
-  const size = 0.6 + Math.random()*1.0;
-  const geo = new THREE.BoxGeometry(size, size, size);
-  const mesh = new THREE.Mesh(geo, enemyMaterial.clone());
-  // spawn at a random edge far from player
-  const angle = Math.random()*Math.PI*2;
-  const dist = 20 + Math.random()*30;
-  mesh.position.set(Math.cos(angle)*dist, size/2, Math.sin(angle)*dist);
-  mesh.userData = {hp: 2 + Math.floor(Math.random()*3), speed: 0.8 + Math.random()*1.2, size};
-  scene.add(mesh);
-  enemies.push(mesh);
-}
-
-// spawn initial wave
-for(let i=0;i<6;i++) spawnEnemy();
-
-// Particles (simple billboards)
-const particles = [];
-function spawnHitParticles(pos, count=12){
-  for(let i=0;i<count;i++){
-    particles.push({pos: pos.clone(), vel: new THREE.Vector3((Math.random()-0.5)*4,(Math.random()-0.5)*4,(Math.random()-0.5)*4), life: 0.6 + Math.random()*0.6});
+btn.onclick=()=>{
+  if(paused){
+    paused=false;
+    ui.classList.remove("paused");
+    try{canvas.requestPointerLock();}
+    catch{fallback=true;notice.style.display="block";}
   }
-}
+};
 
-// Canvas & pointer-lock safe setup
-const canvas = renderer.domElement;
-canvas.style.cursor = 'crosshair';
-
-function showFallbackNotice(){ noticeEl.style.display = 'block'; startBtn.textContent = 'Pointer lock unavailable — Click & drag to look'; }
-function hideFallbackNotice(){ noticeEl.style.display = 'none'; startBtn.textContent = 'Click to Play (Pointer Lock)'; }
-
-startBtn.addEventListener('click', ()=>{
-  // Try to request pointer lock, but this can throw synchronously in some sandboxed frames.
-  // We guard with try/catch and fall back gracefully.
-  try{
-    const result = canvas.requestPointerLock();
-    // Some browsers don't throw but instead fire pointerlockerror -> we listen for that below.
-  }catch(err){
-    console.warn('requestPointerLock failed (caught):', err);
-    // enable fallback mode so the game still works in restricted environments
-    fallbackMouseLook = true;
-    showFallbackNotice();
-  }
-});
-
-// pointer lock events
-document.addEventListener('pointerlockchange', ()=>{
-  usingPointerLock = (document.pointerLockElement === canvas);
-  pointerLocked = usingPointerLock;
-  if(usingPointerLock){
-    // real pointer lock engaged
-    fallbackMouseLook = false;
-    hideFallbackNotice();
-    startBtn.style.display = 'none';
-    canvas.style.cursor = 'none';
-  } else {
-    // pointer lock released
-    startBtn.style.display = 'block';
-    canvas.style.cursor = 'crosshair';
-    // keep fallback enabled if we previously detected pointer lock was blocked
-    if(fallbackMouseLook){ showFallbackNotice(); }
-  }
-});
-
-document.addEventListener('pointerlockerror', (e)=>{
-  console.warn('pointerlockerror event', e);
-  fallbackMouseLook = true;
-  showFallbackNotice();
-});
-
-// Mouse look handling
-// - When pointerLocked is true we use movementX/movementY (relative motion provided by browser)
-// - When pointerLock is unavailable we enable a click+drag fallback: hold mouse and move to look
-
-// mousedown on canvas: start dragging in fallback mode (and also shoot)
-canvas.addEventListener('mousedown', (e)=>{
-  // start fallback dragging if pointer lock isn't available
-  if(fallbackMouseLook && !pointerLocked){
-    dragging = true;
-    lastMouseX = e.clientX;
-    lastMouseY = e.clientY;
-    // hide cursor while dragging to mimic pointer lock feel
-    canvas.style.cursor = 'none';
-  }
-
-  // Left click to shoot (works in both locked and fallback modes)
-  if(e.button === 0 && !paused){
-    shoot();
-  }
-});
-canvas.addEventListener('mouseup', (e)=>{
-  dragging = false;
-  // restore cursor
-  if(!pointerLocked) canvas.style.cursor = 'crosshair';
-});
-// prevent context menu while playing (useful for right-click interactions)
-canvas.addEventListener('contextmenu', (e)=>{ if(pointerLocked || fallbackMouseLook) e.preventDefault(); });
-
-// Global mousemove listener for both modes
-document.addEventListener('mousemove', (e)=>{
-  if(paused) return;
+document.addEventListener("pointerlockchange",()=>{
+  pointerLocked=document.pointerLockElement===canvas;
   if(pointerLocked){
-    // pointer lock provides movementX/movementY
-    const movementX = e.movementX || 0;
-    const movementY = e.movementY || 0;
-    yaw -= movementX * 0.0025;
-    pitch -= movementY * 0.0025;
-    pitch = Math.max(-Math.PI/2 + 0.01, Math.min(Math.PI/2 - 0.01, pitch));
-  } else if(fallbackMouseLook && dragging){
-    // fallback: use clientX/clientY deltas while dragging
-    const dx = e.clientX - lastMouseX;
-    const dy = e.clientY - lastMouseY;
-    lastMouseX = e.clientX; lastMouseY = e.clientY;
-    yaw -= dx * 0.0025;
-    pitch -= dy * 0.0025;
-    pitch = Math.max(-Math.PI/2 + 0.01, Math.min(Math.PI/2 - 0.01, pitch));
+    fallback=false;
+    notice.style.display="none";
+    btn.style.display="none";
+    canvas.style.cursor="none";
+  }else{
+    btn.style.display="block";
+    canvas.style.cursor="crosshair";
   }
 });
 
-// Keyboard
-document.addEventListener('keydown', e=>{
-  if(e.key === 'w') moveForward=true;
-  if(e.key === 's') moveBackward=true;
-  if(e.key === 'a') moveLeft=true;
-  if(e.key === 'd') moveRight=true;
-  if(e.key === 'r'){ reload(); }
-  if(e.key === 'p'){ paused = !paused; }
-});
-document.addEventListener('keyup', e=>{
-  if(e.key === 'w') moveForward=false;
-  if(e.key === 's') moveBackward=false;
-  if(e.key === 'a') moveLeft=false;
-  if(e.key === 'd') moveRight=false;
+document.addEventListener("pointerlockerror",()=>{
+  fallback=true;
+  notice.style.display="block";
 });
 
-function reload(){ if(reloading || ammo === maxAmmo) return; reloading = true; setTimeout(()=>{ ammo = maxAmmo; reloading = false; updateHUD(); }, 1000); }
+/* =========================
+   INPUT
+========================= */
+addEventListener("keydown",e=>{
+  if(e.key in move) move[e.key]=1;
+  if(e.key==="r"&&ammo<30) setTimeout(()=>ammo=30,800);
+  if(e.key==="p") paused=!paused,ui.classList.toggle("paused",paused);
+});
+addEventListener("keyup",e=>{if(e.key in move) move[e.key]=0;});
 
-function shoot(){ if(reloading) return; if(ammo <= 0) return; ammo--; updateHUD();
-  // raycast from camera
-  const origin = camera.position.clone();
-  const direction = new THREE.Vector3(0,0,-1).applyAxisAngle(new THREE.Vector3(0,1,0), yaw).applyAxisAngle(new THREE.Vector3(1,0,0), pitch).normalize();
-  const ray = new THREE.Raycaster(origin, direction, 0, 200);
-  const hit = ray.intersectObjects(enemies, false)[0];
+canvas.onmousedown=e=>{
+  if(fallback&&!pointerLocked){
+    dragging=true;lastX=e.clientX;lastY=e.clientY;
+    canvas.style.cursor="none";
+  }
+  if(e.button===0&&!paused) shoot();
+};
+canvas.onmouseup=()=>{dragging=false;canvas.style.cursor="crosshair";};
+
+addEventListener("mousemove",e=>{
+  if(paused) return;
+  let dx=0,dy=0;
+  if(pointerLocked){dx=e.movementX;dy=e.movementY;}
+  else if(fallback&&dragging){
+    dx=e.clientX-lastX;dy=e.clientY-lastY;
+    lastX=e.clientX;lastY=e.clientY;
+  }
+  yaw-=dx*0.0025;
+  pitch=Math.max(-1.55,Math.min(1.55,pitch-dy*0.0025));
+});
+/* =========================
+   GAMEPAD SUPPORT
+========================= */
+let gamepadIndex = null;
+let lastButtons = [];
+
+addEventListener("gamepadconnected", e => {
+  gamepadIndex = e.gamepad.index;
+  console.log("Gamepad connected");
+});
+addEventListener("gamepaddisconnected", () => {
+  gamepadIndex = null;
+  console.log("Gamepad disconnected");
+});
+
+function handleGamepad(dt, now){
+  if(gamepadIndex === null) return;
+  const gp = navigator.getGamepads()[gamepadIndex];
+  if(!gp) return;
+
+  // --- sticks ---
+  const lx = gp.axes[0]; // left stick X
+  const ly = gp.axes[1]; // left stick Y
+  const rx = gp.axes[2]; // right stick X
+  const ry = gp.axes[3]; // right stick Y
+  let lastShotTime = 0;
+const fireRate = 0.18; // seconds between shots
+
+
+  // deadzone
+  const dz = 0.15;
+
+  move.w = ly < -dz ? 1 : 0;
+  move.s = ly >  dz ? 1 : 0;
+  move.a = lx < -dz ? 1 : 0;
+  move.d = lx >  dz ? 1 : 0;
+
+  // look
+  yaw   -= rx * 2.5 * dt;
+  pitch -= ry * 2.5 * dt;
+  pitch = Math.max(-1.55, Math.min(1.55, pitch));
+
+  // --- buttons ---
+  gp.buttons.forEach((b, i) => {
+    const pressed = b.pressed;
+    const wasPressed = lastButtons[i];
+
+    // RT / R2 → shoot (rate limited)
+if(i === 7 && pressed && !paused){
+  if(now - lastShotTime > fireRate){
+    shoot();
+    lastShotTime = now;
+  }
+}
+
+
+    // X / Square → reload
+    if(i === 2 && pressed && !wasPressed && ammo < 30){
+      setTimeout(()=>ammo=30,800);
+    }
+
+    // Start / Options → pause
+    if(i === 9 && pressed && !wasPressed){
+      paused = !paused;
+      ui.classList.toggle("paused", paused);
+    }
+
+    lastButtons[i] = pressed;
+  });
+}
+
+/* =========================
+   ENEMIES
+========================= */
+const enemies=[];
+function spawnEnemy(){
+  if(enemies.length>20) return;
+  const m=new THREE.Mesh(
+    new THREE.BoxGeometry(1,1,1),
+    new THREE.MeshStandardMaterial({color:0xaa4444})
+  );
+  const a=Math.random()*Math.PI*2,d=30+Math.random()*20;
+  m.position.set(Math.cos(a)*d,0.5,Math.sin(a)*d);
+  m.userData={hp:3,speed:1+Math.random()};
+  scene.add(m);enemies.push(m);
+}
+for(let i=0;i<6;i++)spawnEnemy();
+
+/* =========================
+   SHOOTING
+========================= */
+const ray=new THREE.Raycaster();
+function shoot(){
+  if(ammo<=0) return;
+  ammo--;
+  ray.set(camera.position,camera.getWorldDirection(new THREE.Vector3()));
+  const hit=ray.intersectObjects(enemies)[0];
   if(hit){
-    const enemy = hit.object;
-    enemy.userData.hp -= 1;
-    spawnHitParticles(hit.point, 10);
-    if(enemy.userData.hp <= 0){
-      // destroy
-      scene.remove(enemy);
-      const idx = enemies.indexOf(enemy); if(idx>=0) enemies.splice(idx,1);
-      score += 10;
-      // spawn two small pickups (optional)
-      spawnEnemy(); spawnEnemy();
+    hit.object.userData.hp--;
+    hit.object.position.addScaledVector(ray.ray.direction,-0.3);
+    if(hit.object.userData.hp<=0){
+      score+=10;
+      scene.remove(hit.object);
+      enemies.splice(enemies.indexOf(hit.object),1);
+      spawnEnemy();spawnEnemy();
     }
-    updateHUD();
   }
 }
 
-function updateHUD(){ healthEl.textContent = Math.max(0, Math.floor(health)); ammoEl.textContent = ammo; scoreEl.textContent = score; }
+/* =========================
+   LOOP
+========================= */
+let last=performance.now();
+function loop(now){
+  requestAnimationFrame(loop);
+  const dt=Math.min(.05,(now-last)/1000);last=now;
+  if(!paused){
+    camera.rotation.order="YXZ";
+    camera.rotation.y=yaw;
+    camera.rotation.x=pitch;
+    handleGamepad(dt, performance.now()/1000);
+    const dir=new THREE.Vector3(
+      move.d-move.a,0,move.s-move.w
+    ).normalize().applyAxisAngle(new THREE.Vector3(0,1,0),yaw);
+    camera.position.addScaledVector(dir,speed*dt);
 
-// Resize handling
-window.addEventListener('resize', ()=>{ camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
-
-// Main loop
-let lastTime = performance.now();
-function animate(now){
-  requestAnimationFrame(animate);
-  const dt = Math.min(0.05, (now - lastTime)/1000);
-  lastTime = now;
-  if(!paused){ update(dt); }
-  renderer.render(scene, camera);
-}
-requestAnimationFrame(animate);
-
-function update(dt){
-  // camera orientation
-  camera.rotation.order = 'YXZ';
-  camera.rotation.y = yaw;
-  camera.rotation.x = pitch;
-  camera.position.y = 1.6; // fixed eye height
-
-  // movement vector in camera space
-  const forward = new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
-  forward.y = 0; forward.normalize();
-  const right = new THREE.Vector3(1,0,0).applyQuaternion(camera.quaternion);
-  right.y = 0; right.normalize();
-
-  let dir = new THREE.Vector3(0,0,0);
-  if(moveForward) dir.add(forward);
-  if(moveBackward) dir.sub(forward);
-  if(moveLeft) dir.sub(right);
-  if(moveRight) dir.add(right);
-  if(dir.lengthSq()>0) dir.normalize();
-
-  camera.position.addScaledVector(dir, walkSpeed*dt);
-
-  // keep camera inside bounds
-  camera.position.x = Math.max(-95, Math.min(95, camera.position.x));
-  camera.position.z = Math.max(-95, Math.min(95, camera.position.z));
-
-  // Update enemies: move toward player
-  for(let i=enemies.length-1;i>=0;i--){
-    const e = enemies[i];
-    const pos = e.position;
-    const toPlayer = new THREE.Vector3().subVectors(camera.position, pos);
-    const dist = toPlayer.length();
-    toPlayer.normalize();
-    e.position.addScaledVector(toPlayer, e.userData.speed * dt);
-    // simple collision with player
-    if(dist < 1.2){
-      health -= 10;
-      spawnHitParticles(camera.position, 8);
-      // remove enemy
-      scene.remove(e);
-      enemies.splice(i,1);
-      score = Math.max(0, score - 5);
-      updateHUD();
-      if(health <= 0){
-        gameOver();
-      }
-    }
+    enemies.forEach(e=>{
+      const v=new THREE.Vector3().subVectors(camera.position,e.position);
+      v.y=0;v.normalize();
+      e.position.addScaledVector(v,e.userData.speed*dt);
+    });
   }
-
-  // Particles update
-  for(let i=particles.length-1;i>=0;i--){
-    const p = particles[i];
-    p.pos.addScaledVector(p.vel, dt);
-    p.life -= dt;
-    if(p._mesh){
-      p._mesh.position.copy(p.pos);
-      p._mesh.material.opacity = Math.max(0, p.life);
-    } else {
-      const g = new THREE.PlaneGeometry(0.06,0.06);
-      const m = new THREE.MeshBasicMaterial({color:0xffcc66,transparent:true,side:THREE.DoubleSide});
-      const mesh = new THREE.Mesh(g,m);
-      mesh.position.copy(p.pos);
-      mesh.lookAt(camera.position);
-      scene.add(mesh);
-      p._mesh = mesh;
-    }
-    if(p.life <= 0){
-      if(p._mesh) scene.remove(p._mesh);
-      particles.splice(i,1);
-    }
-  }
-
-  // occasionally spawn enemies
-  if(Math.random() < 0.01) spawnEnemy();
+  hpEl.textContent=hp;
+  ammoEl.textContent=ammo;
+  scoreEl.textContent=score;
+  renderer.render(scene,camera);
 }
-
-function gameOver(){ paused = true; pointerLocked = false; usingPointerLock = false; if(document.pointerLockElement === canvas){ try{ document.exitPointerLock(); }catch(e){ console.warn('exitPointerLock() failed:', e); } } alert('Game Over — Score: '+score); }
-
-// initial HUD update
-updateHUD();
-
+loop(performance.now());
 </script>
 </body>
 </html>
