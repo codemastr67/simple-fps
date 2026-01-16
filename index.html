@@ -304,21 +304,40 @@ for(let i=0;i<6;i++){
 ========================= */
 const ray=new THREE.Raycaster();
 function shoot(){
-  if(ammo<=0) return;
+  if(ammo <= 0) return;
   ammo--;
-  ray.set(camera.position,camera.getWorldDirection(new THREE.Vector3()));
-  const hit=ray.intersectObjects(enemies)[0];
+  ray.set(camera.position, camera.getWorldDirection(new THREE.Vector3()));
+
+  // intersect all child meshes of enemies groups
+  const hit = ray.intersectObjects(enemies, true)[0]; // "true" = recursive
   if(hit){
-    hit.object.userData.hp--;
-    hit.object.position.addScaledVector(ray.ray.direction,-0.3);
-    if(hit.object.userData.hp<=0){
-      score+=10;
-      scene.remove(hit.object);
-      enemies.splice(enemies.indexOf(hit.object),1);
-      spawnEnemy();spawnEnemy();
+    const enemy = hit.object.parent; // get the group
+    if(!enemy.userData.hp) return;   // safety check
+
+    enemy.userData.hp--;
+    
+    // optional: small knockback on the whole group
+    const dir = ray.ray.direction.clone();
+    enemy.position.addScaledVector(dir, -0.3);
+
+    if(enemy.userData.hp <= 0){
+      score += 10;
+      scene.remove(enemy);
+      enemies.splice(enemies.indexOf(enemy), 1);
+      // spawn two new enemies
+      const a = Math.random()*Math.PI*2;
+      const d = 30 + Math.random()*20;
+      const e = createHumanEnemy();
+      e.position.set(Math.cos(a)*d, 0.5, Math.sin(a)*d);
+
+      const a2 = Math.random()*Math.PI*2;
+      const d2 = 30 + Math.random()*20;
+      const e2 = createHumanEnemy();
+      e2.position.set(Math.cos(a2)*d2, 0.5, Math.sin(a2)*d2);
     }
   }
 }
+
 
 /* =========================
    LOOP
