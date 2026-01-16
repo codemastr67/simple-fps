@@ -282,47 +282,60 @@ function shoot(){
 /* =========================
    LOOP
 ========================= */
-  let last = performance.now();
+let last = performance.now();
 function loop(now){
   requestAnimationFrame(loop);
-  const dt=Math.min(.05,(now-last)/1000);last=now;
+  const dt=Math.min(.05,(now-last)/1000);
+  last=now;
+
   if(!paused){
     camera.rotation.order = "YXZ";
-camera.rotation.y = yaw;
-camera.rotation.x = pitch;
+    camera.rotation.y = yaw;
+    camera.rotation.x = pitch;
 
-if (thirdPerson) {
-  const offset = new THREE.Vector3(0, 1.6, thirdPersonDist)
-    .applyAxisAngle(new THREE.Vector3(0,1,0), yaw);
+    if (thirdPerson) {
+      const offset = new THREE.Vector3(0, 1.6, thirdPersonDist)
+        .applyAxisAngle(new THREE.Vector3(0,1,0), yaw);
 
-  camera.position
-    .copy(camera.position)
-    .add(offset);
-}
+      camera.position
+        .copy(camera.position)
+        .add(offset);
+    }
+
     handleGamepad(dt);
-    const dir=new THREE.Vector3(
-      move.d-move.a,0,move.s-move.w
-    ).normalize().applyAxisAngle(new THREE.Vector3(0,1,0),yaw);
-    camera.position.addScaledVector(dir,speed*dt);
+    const dir = new THREE.Vector3(
+      move.d-move.a, 0, move.s-move.w
+    ).normalize().applyAxisAngle(new THREE.Vector3(0,1,0), yaw);
+    camera.position.addScaledVector(dir, speed*dt);
 
     enemies.forEach(e => {
-  // move toward player
-  const v = new THREE.Vector3().subVectors(camera.position, e.position);
-  v.y = 0;
-  const dist = v.length();
-  v.normalize();
-  e.position.addScaledVector(v, e.userData.speed * dt);
+      // move toward player
+      const v = new THREE.Vector3().subVectors(camera.position, e.position);
+      v.y = 0;
+      const dist = v.length();
+      v.normalize();
+      e.position.addScaledVector(v, e.userData.speed * dt);
 
-  // simple cooldown approach
-  if(dist < 1){
-    if(!e.userData.lastHit || performance.now() - e.userData.lastHit > 500){
-      hp -= 10; // damage amount
-      hp = Math.max(0, hp); // clamp to 0
-      e.userData.lastHit = performance.now();
-    }
+      // cooldown damage
+      if(dist < 1){
+        if(!e.userData.lastHit || performance.now() - e.userData.lastHit > 500){
+          hp -= 10;               // damage
+          hp = Math.max(0, hp);   // clamp
+          e.userData.lastHit = performance.now();
+        }
+      }
+    });
   }
-});
 
+  // update UI
+  hpEl.textContent = hp;
+  ammoEl.textContent = ammo;
+  scoreEl.textContent = score;
+
+  renderer.render(scene, camera);
+}
+
+// start the loop
 loop(performance.now());
 </script>
 </body>
