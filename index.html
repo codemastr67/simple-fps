@@ -184,7 +184,7 @@ addEventListener("gamepaddisconnected", () => {
   console.log("Gamepad disconnected");
 });
 
-function handleGamepad(dt, now){
+function handleGamepad(dt){
   if(gamepadIndex === null) return;
   const gp = navigator.getGamepads()[gamepadIndex];
   if(!gp) return;
@@ -194,9 +194,6 @@ function handleGamepad(dt, now){
   const ly = gp.axes[1]; // left stick Y
   const rx = gp.axes[2]; // right stick X
   const ry = gp.axes[3]; // right stick Y
-  let lastShotTime = 0;
-const fireRate = 0.18; // seconds between shots
-
 
   // deadzone
   const dz = 0.15;
@@ -216,12 +213,9 @@ const fireRate = 0.18; // seconds between shots
     const pressed = b.pressed;
     const wasPressed = lastButtons[i];
 
-    // RT / R2 → shoot (rate limited)
-if(i === 7 && pressed && !paused){
-  if(now - lastShotTime > fireRate){
-    shoot();
-    lastShotTime = now;
-  }
+    // RT / R2 → shoot ON PRESS (not hold)
+if (i === 7 && pressed && !wasPressed && !paused) {
+  shoot();
 }
 
 
@@ -281,7 +275,6 @@ function shoot(){
 /* =========================
    LOOP
 ========================= */
-let last=performance.now();
 function loop(now){
   requestAnimationFrame(loop);
   const dt=Math.min(.05,(now-last)/1000);last=now;
@@ -289,7 +282,7 @@ function loop(now){
     camera.rotation.order="YXZ";
     camera.rotation.y=yaw;
     camera.rotation.x=pitch;
-    handleGamepad(dt, performance.now()/1000);
+    handleGamepad(dt);
     const dir=new THREE.Vector3(
       move.d-move.a,0,move.s-move.w
     ).normalize().applyAxisAngle(new THREE.Vector3(0,1,0),yaw);
