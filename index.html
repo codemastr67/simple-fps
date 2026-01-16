@@ -305,30 +305,24 @@ if (thirdPerson) {
     ).normalize().applyAxisAngle(new THREE.Vector3(0,1,0),yaw);
     camera.position.addScaledVector(dir,speed*dt);
 
-    enemies.forEach(e=>{
-      const v=new THREE.Vector3().subVectors(camera.position,e.position);
-      v.y=0;v.normalize();
-      e.position.addScaledVector(v,e.userData.speed*dt);
-    });
-  }
-  hpEl.textContent=hp;
-  ammoEl.textContent=ammo;
-  scoreEl.textContent=score;
-  renderer.render(scene,camera);
-  enemies.forEach(e => {
+    enemies.forEach(e => {
   // move toward player
   const v = new THREE.Vector3().subVectors(camera.position, e.position);
   v.y = 0;
-  const dist = v.length(); // distance to player
+  const dist = v.length();
   v.normalize();
   e.position.addScaledVector(v, e.userData.speed * dt);
 
-  // check collision with player
-  if(dist < 1){ // 1 is the collision radius, adjust as needed
-    hp -= 1;     // damage player
+  // simple cooldown approach
+  if(dist < 1){
+    if(!e.userData.lastHit || performance.now() - e.userData.lastHit > 500){
+      hp -= 10; // damage amount
+      hp = Math.max(0, hp); // clamp to 0
+      e.userData.lastHit = performance.now();
+    }
   }
 });
-}
+
 loop(performance.now());
 </script>
 </body>
