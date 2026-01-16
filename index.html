@@ -241,51 +241,59 @@ if (i === 12 && pressed && !wasPressed) {
   });
 }
 /* =========================
-   MOBILE CONTROLS
+   MOBILE ARROW KEY UI
 ========================= */
-function isMobile() {
-  return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-}
-
-if (isMobile()) {
+if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
   const mobileUI = document.createElement('div');
   mobileUI.style.position = 'fixed';
-  mobileUI.style.bottom = '20px';
-  mobileUI.style.left = '50%';
-  mobileUI.style.transform = 'translateX(-50%)';
-  mobileUI.style.display = 'flex';
-  mobileUI.style.gap = '10px';
+  mobileUI.style.bottom = '50px';
+  mobileUI.style.left = '50px';
+  mobileUI.style.width = '150px';
+  mobileUI.style.height = '150px';
   mobileUI.style.pointerEvents = 'auto';
   document.body.appendChild(mobileUI);
 
-  // left/right/up/down buttons
-  const buttons = {};
-  ['w','a','s','d','shoot'].forEach(key=>{
+  const createBtn = (text, x, y) => {
     const btn = document.createElement('button');
-    btn.textContent = key === 'w' ? '↑' : key === 's' ? '↓' : key === 'a' ? '←' : key === 'd' ? '→' : '●';
-    btn.style.width = '60px';
-    btn.style.height = '60px';
-    btn.style.borderRadius = '50%';
+    btn.textContent = text;
+    btn.style.position = 'absolute';
+    btn.style.width = '50px';
+    btn.style.height = '50px';
+    btn.style.left = `${x}px`;
+    btn.style.top = `${y}px`;
+    btn.style.borderRadius = '10px';
     btn.style.background = 'rgba(0,0,0,0.5)';
     btn.style.color = '#fff';
     btn.style.fontSize = '24px';
     btn.style.border = 'none';
-    btn.style.touchAction = 'none'; // prevent scrolling
+    btn.style.touchAction = 'none';
     mobileUI.appendChild(btn);
-    buttons[key] = btn;
+    return btn;
+  };
 
-    // touch events
-    btn.addEventListener('touchstart', e=>{
+  // diamond layout
+  const buttons = {
+    w: createBtn('↑', 50, 0),
+    a: createBtn('←', 0, 50),
+    s: createBtn('↓', 50, 100),
+    d: createBtn('→', 100, 50),
+    shoot: createBtn('●', 200, 50) // optional shoot button to the right
+  };
+
+  // touch events
+  for (let key in buttons) {
+    buttons[key].addEventListener('touchstart', e=>{
       e.preventDefault();
-      if(key==='shoot') shoot();
+      if (key === 'shoot') shoot();
       else move[key]=1;
     });
-    btn.addEventListener('touchend', e=>{
+    buttons[key].addEventListener('touchend', e=>{
       e.preventDefault();
-      if(key!=='shoot') move[key]=0;
+      if (key !== 'shoot') move[key]=0;
     });
-  });
+  }
 }
+
 /* =========================
    ENEMIES
 ========================= */
