@@ -104,6 +104,9 @@ let move={w:0,a:0,s:0,d:0};
 let ammo=30,score=0,hp=100;
 let paused=true;
 const speed=5;
+  let thirdPerson = false;
+const thirdPersonDist = 6;
+
 
 /* =========================
    POINTER LOCK SAFE
@@ -218,6 +221,10 @@ if (i === 7 && pressed && !wasPressed && !paused) {
   shoot();
 }
 
+// D-Pad Up → toggle perspective
+if (i === 12 && pressed && !wasPressed) {
+  thirdPerson = !thirdPerson;
+}
 
     // X / Square → reload
     if(i === 2 && pressed && !wasPressed && ammo < 30){
@@ -280,9 +287,18 @@ function loop(now){
   requestAnimationFrame(loop);
   const dt=Math.min(.05,(now-last)/1000);last=now;
   if(!paused){
-    camera.rotation.order="YXZ";
-    camera.rotation.y=yaw;
-    camera.rotation.x=pitch;
+    camera.rotation.order = "YXZ";
+camera.rotation.y = yaw;
+camera.rotation.x = pitch;
+
+if (thirdPerson) {
+  const offset = new THREE.Vector3(0, 1.6, thirdPersonDist)
+    .applyAxisAngle(new THREE.Vector3(0,1,0), yaw);
+
+  camera.position
+    .copy(camera.position)
+    .add(offset);
+}
     handleGamepad(dt);
     const dir=new THREE.Vector3(
       move.d-move.a,0,move.s-move.w
