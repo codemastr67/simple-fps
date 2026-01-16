@@ -315,6 +315,19 @@ if (thirdPerson) {
   ammoEl.textContent=ammo;
   scoreEl.textContent=score;
   renderer.render(scene,camera);
+  enemies.forEach(e => {
+  // move toward player
+  const v = new THREE.Vector3().subVectors(camera.position, e.position);
+  v.y = 0;
+  const dist = v.length(); // distance to player
+  v.normalize();
+  e.position.addScaledVector(v, e.userData.speed * dt);
+
+  // check collision with player
+  if(dist < 1){ // 1 is the collision radius, adjust as needed
+    hp -= 1;     // damage player
+  }
+});
 }
 loop(performance.now());
 </script>
