@@ -542,6 +542,12 @@ if (thirdPerson) {
 if (player) {
   player.position.copy(cameraBasePosition);
 }
+if (player) {
+  player.position.copy(cameraBasePosition);
+
+  // show only in third-person
+  player.visible = thirdPerson;
+}
 
     enemies.forEach(e => {
       // move toward player
