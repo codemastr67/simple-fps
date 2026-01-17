@@ -106,6 +106,7 @@ let paused=true;
 const speed=5;
   let thirdPerson = false;
 const thirdPersonDist = 6;
+let cameraBasePosition = new THREE.Vector3(0, 1.6, 6);
 
 
 /* =========================
@@ -463,21 +464,32 @@ function loop(now){
     camera.rotation.order = "YXZ";
     camera.rotation.y = yaw;
     camera.rotation.x = pitch;
+if (thirdPerson) {
+  // camera is offset behind the player
+  const offset = new THREE.Vector3(0, 1.6, thirdPersonDist); // up + back
+  offset.applyAxisAngle(new THREE.Vector3(0,1,0), yaw); // rotate with player
 
-    if (thirdPerson) {
-      const offset = new THREE.Vector3(0, 1.6, thirdPersonDist)
-        .applyAxisAngle(new THREE.Vector3(0,1,0), yaw);
-
-      camera.position
-        .copy(camera.position)
-        .add(offset);
-    }
+  camera.position.copy(camera.positionStart.clone().add(offset));
+} else {
+  // first-person: camera at player position
+  camera.position.copy(camera.positionStart);
+}
 
     handleGamepad(dt);
-    const dir = new THREE.Vector3(
-      move.d-move.a, 0, move.s-move.w
-    ).normalize().applyAxisAngle(new THREE.Vector3(0,1,0), yaw);
-    camera.position.addScaledVector(dir, speed*dt);
+    // update the player position
+const dir = new THREE.Vector3(move.d - move.a, 0, move.s - move.w)
+  .normalize()
+  .applyAxisAngle(new THREE.Vector3(0,1,0), yaw);
+cameraBasePosition.addScaledVector(dir, speed*dt);
+
+// then use cameraBasePosition in the third-person offset calculation
+if (thirdPerson) {
+  const offset = new THREE.Vector3(0, 1.6, thirdPersonDist);
+  offset.applyAxisAngle(new THREE.Vector3(0,1,0), yaw);
+  camera.position.copy(cameraBasePosition.clone().add(offset));
+} else {
+  camera.position.copy(cameraBasePosition);
+}
 
     enemies.forEach(e => {
       // move toward player
