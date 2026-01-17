@@ -477,14 +477,16 @@ if (thirdPerson) {
 
     handleGamepad(dt);
     // update the player position
+// update player position
 const dir = new THREE.Vector3(move.d - move.a, 0, move.s - move.w)
   .normalize()
   .applyAxisAngle(new THREE.Vector3(0,1,0), yaw);
+
 cameraBasePosition.addScaledVector(dir, speed*dt);
 
-// then use cameraBasePosition in the third-person offset calculation
+// position camera
 if (thirdPerson) {
-  const offset = new THREE.Vector3(0, 1.6, thirdPersonDist);
+  const offset = new THREE.Vector3(0, 1.6, thirdPersonDist); // up + back
   offset.applyAxisAngle(new THREE.Vector3(0,1,0), yaw);
   camera.position.copy(cameraBasePosition.clone().add(offset));
 } else {
