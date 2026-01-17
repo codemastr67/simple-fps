@@ -532,10 +532,11 @@ cameraBasePosition.addScaledVector(dir, speed*dt);
 // position camera
 if (thirdPerson) {
   const offset = new THREE.Vector3(0, 1.6, thirdPersonDist); // up + back
-  offset.applyAxisAngle(new THREE.Vector3(0,1,0), yaw);
+  offset.applyAxisAngle(new THREE.Vector3(0,1,0), yaw); // rotate with player
   camera.position.copy(cameraBasePosition.clone().add(offset));
 } else {
-  camera.position.copy(cameraBasePosition);
+  // first-person: camera at head height
+  camera.position.copy(cameraBasePosition.clone().add(new THREE.Vector3(0,1.6,0)));
 }
 // move player model
 if (player) {
