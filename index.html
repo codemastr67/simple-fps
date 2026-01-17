@@ -469,10 +469,10 @@ if (thirdPerson) {
   const offset = new THREE.Vector3(0, 1.6, thirdPersonDist); // up + back
   offset.applyAxisAngle(new THREE.Vector3(0,1,0), yaw); // rotate with player
 
-  camera.position.copy(camera.positionStart.clone().add(offset));
+  camera.position.copy(cameraBasePosition.clone().add(offset));
 } else {
   // first-person: camera at player position
-  camera.position.copy(camera.positionStart);
+  camera.position.copy(cameraBasePosition);
 }
 
     handleGamepad(dt);
