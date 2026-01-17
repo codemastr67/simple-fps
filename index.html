@@ -107,6 +107,51 @@ const speed=5;
   let thirdPerson = false;
 const thirdPersonDist = 6;
 let cameraBasePosition = new THREE.Vector3(0, 1.6, 6);
+let player; // global
+
+function createPlayerModel() {
+  const group = new THREE.Group();
+
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x4444aa }); // blue
+
+  // body
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1,1.5,0.5), bodyMat);
+  body.position.y = 0.75;
+  group.add(body);
+
+  // head
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.6,0.6,0.6), bodyMat);
+  head.position.y = 1.8;
+  group.add(head);
+
+  // left arm
+  const lArm = new THREE.Mesh(new THREE.BoxGeometry(0.3,1,0.3), bodyMat);
+  lArm.position.set(-0.65, 1.0, 0);
+  group.add(lArm);
+
+  // right arm
+  const rArm = new THREE.Mesh(new THREE.BoxGeometry(0.3,1,0.3), bodyMat);
+  rArm.position.set(0.65, 1.0, 0);
+  group.add(rArm);
+
+  // left leg
+  const lLeg = new THREE.Mesh(new THREE.BoxGeometry(0.3,1,0.3), bodyMat);
+  lLeg.position.set(-0.25, -0.5, 0);
+  group.add(lLeg);
+
+  // right leg
+  const rLeg = new THREE.Mesh(new THREE.BoxGeometry(0.3,1,0.3), bodyMat);
+  rLeg.position.set(0.25, -0.5, 0);
+  group.add(rLeg);
+
+  group.position.copy(cameraBasePosition); // spawn at player
+  scene.add(group);
+
+  return group;
+}
+
+// spawn the player model
+player = createPlayerModel();
 
 
 /* =========================
@@ -491,6 +536,10 @@ if (thirdPerson) {
   camera.position.copy(cameraBasePosition.clone().add(offset));
 } else {
   camera.position.copy(cameraBasePosition);
+}
+// move player model
+if (player) {
+  player.position.copy(cameraBasePosition);
 }
 
     enemies.forEach(e => {
