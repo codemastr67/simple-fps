@@ -550,23 +550,22 @@ if (player) {
 }
 
     enemies.forEach(e => {
-      // move toward player
-      const v = new THREE.Vector3().subVectors(camera.position, e.position);
-      v.y = 0;
-      const dist = v.length();
-      v.normalize();
-      e.position.addScaledVector(v, e.userData.speed * dt);
+  // vector from enemy to player
+  const v = new THREE.Vector3().subVectors(player.position, e.position);
+  v.y = 0; // ignore vertical distance if you want
+  const dist = v.length();
+  v.normalize();
+  e.position.addScaledVector(v, e.userData.speed * dt);
 
-      // cooldown damage
-      if(dist < 1){
-        if(!e.userData.lastHit || performance.now() - e.userData.lastHit > 500){
-          hp -= 10;               // damage
-          hp = Math.max(0, hp);   // clamp
-          e.userData.lastHit = performance.now();
-        }
-      }
-    });
+  // collision check
+  if(dist < 1){ // 1 = collision radius, tweak if needed
+    if(!e.userData.lastHit || performance.now() - e.userData.lastHit > 500){
+      hp -= 10;               // damage player
+      hp = Math.max(0, hp);
+      e.userData.lastHit = performance.now();
+    }
   }
+});
 
   // update UI
   hpEl.textContent = hp;
